@@ -1,0 +1,55 @@
+name: Record Multi Links
+
+on:
+  workflow_dispatch:
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+
+    env:
+      MAX_MINUTES: "480"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: docker build -t dlr:latest .
+
+      - name: Prepare folders
+        run: mkdir -p downloads logs
+
+      - name: Run recorder (read URLs from config/URL_config.ini)
+        run: |
+          set -e
+          timeout "$(( ${MAX_MINUTES} * 60 ))" \
+            docker run --rm \
+              -v "$PWD/downloads":/app/downloads \
+              -v "$PWD/logs":/app/logs \
+              -v "$PWD/config":/app/config \
+              -e PYTHONIOENCODING="$PYTHONIOENCODING" \
+              dlr:latest \
+              bash -lc '
+                echo "Booting recorder (multi link mode)..."
+                python3 main.py || true
+              '
+
+      - name: List recorded files
+        run: |
+          echo "downloads:"
+          ls -lah downloads || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: recordings-${{ github.run_id }}
+          path: |
+            downloads/**/*
+            logs/**/*
+          if-no-files-found: warn
+          compression-level: 0
