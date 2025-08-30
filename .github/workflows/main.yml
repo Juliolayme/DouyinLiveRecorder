@@ -6,13 +6,13 @@ on:
 jobs:
   record:
     runs-on: ubuntu-latest
-   
+    timeout-minutes: 480
     env:
       # 👉 Điền link stream cố định ở đây (ưu tiên URL PC)
       STREAM_URL: "https://live.douyin.com/39766954060"
-      # Giới hạn thời lượng để runner không treo vô hạn
       MAX_MINUTES: "480"
       PYTHONIOENCODING: "utf-8"
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -20,25 +20,31 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build DouyinLiveRecorder image
+      - name: Build image
         run: docker build -t dlr:latest .
 
-      - name: Prepare output folders
-        run: mkdir -p downloads logs
+      - name: Prepare folders & config
+        run: |
+          mkdir -p downloads logs config
+          # Ghi URL vào config/URL_config.ini (mỗi dòng 1 link)
+          printf "%s\n" "$STREAM_URL" > config/URL_config.ini
+          echo "Wrote config/URL_config.ini:"
+          cat config/URL_config.ini
 
-      - name: Run recorder (feed URL via stdin)
+      - name: Run recorder (non-interactive; read URLs from config)
         run: |
           set -e
           timeout "$(( ${MAX_MINUTES} * 60 ))" \
             docker run --rm \
               -v "$PWD/downloads":/app/downloads \
               -v "$PWD/logs":/app/logs \
+              -v "$PWD/config":/app/config \
               -e PYTHONIOENCODING="$PYTHONIOENCODING" \
               dlr:latest \
               bash -lc '
-                echo "Booting recorder..."
-                # bơm URL vào stdin -> tránh prompt tương tác
-                printf "%s\n" "$STREAM_URL" | python3 main.py || true
+                echo "Booting recorder (config mode)..."
+                # Chạy trực tiếp, chương trình sẽ đọc /app/config/URL_config.ini
+                python3 main.py || true
               '
 
       - name: List recorded files
