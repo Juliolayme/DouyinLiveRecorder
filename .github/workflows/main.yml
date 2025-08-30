@@ -6,10 +6,13 @@ on:
 jobs:
   record:
     runs-on: ubuntu-latest
-    timeout-minutes: 480
+   
     env:
-      STREAM_URL: "https://live.douyin.com/39766954060"   # 👉 điền link stream cố định ở đây
-      MAX_MINUTES: "480"                           # giới hạn tối đa phút, có thể đổi
+      # 👉 Điền link stream cố định ở đây (ưu tiên URL PC)
+      STREAM_URL: "https://live.douyin.com/39766954060"
+      # Giới hạn thời lượng để runner không treo vô hạn
+      MAX_MINUTES: "480"
+      PYTHONIOENCODING: "utf-8"
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,27 +26,25 @@ jobs:
       - name: Prepare output folders
         run: mkdir -p downloads logs
 
-      - name: Run recorder
+      - name: Run recorder (feed URL via stdin)
         run: |
+          set -e
           timeout "$(( ${MAX_MINUTES} * 60 ))" \
             docker run --rm \
               -v "$PWD/downloads":/app/downloads \
               -v "$PWD/logs":/app/logs \
+              -e PYTHONIOENCODING="$PYTHONIOENCODING" \
               dlr:latest \
               bash -lc '
-                # 👇 chỉnh lệnh chạy theo repo. Ví dụ:
-                # python3 main.py --url "$STREAM_URL" --once
-                if [ -f main.py ]; then
-                  python3 main.py || true
-                elif [ -f demo.py ]; then
-                  python3 demo.py || true
-                else
-                  echo "Không tìm thấy main.py/demo.py" && exit 1
-                fi
+                echo "Booting recorder..."
+                # bơm URL vào stdin -> tránh prompt tương tác
+                printf "%s\n" "$STREAM_URL" | python3 main.py || true
               '
 
       - name: List recorded files
-        run: ls -lah downloads || true
+        run: |
+          echo "downloads:"
+          ls -lah downloads || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
