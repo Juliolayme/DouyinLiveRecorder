@@ -9,8 +9,8 @@ jobs:
     timeout-minutes: 480
     env:
       # 👉 Điền link stream cố định ở đây (ưu tiên URL PC)
-      #STREAM_URL: "https://live.douyin.com/39766954060"
-      STREAM_URL: "https://vt.tiktok.com/ZSHtCwgrjPexM-nIsf8/"
+      STREAM_URL: "https://live.douyin.com/39766954060"
+      #STREAM_URL: "https://vt.tiktok.com/ZSHtCwgrjPexM-nIsf8/"
       MAX_MINUTES: "480"
       PYTHONIOENCODING: "utf-8"
 
